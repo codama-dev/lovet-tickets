@@ -1,0 +1,100 @@
+name: Auto-add issues to project board
+
+on:
+  issues:
+    types: [opened]
+
+env:
+  PROJECT_ID: "PVT_kwDOBqFAks4BPjQd"
+  STATUS_FIELD_ID: "PVTSSF_lADOBqFAks4BPjQdzg97V88"
+  STATUS_BACKLOG: "38269463"
+
+jobs:
+  add-to-project:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add issue to project
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+        run: |
+          ITEM_ID=$(gh api graphql -f query='
+            mutation($projectId: ID!, $contentId: ID!) {
+              addProjectV2ItemById(input: {
+                projectId: $projectId,
+                contentId: $contentId
+              }) {
+                item { id }
+              }
+            }' \
+            -f projectId="$PROJECT_ID" \
+            -f contentId="${{ github.event.issue.node_id }}" \
+            --jq '.data.addProjectV2ItemById.item.id')
+
+          echo "Added to project. Item ID: $ITEM_ID"
+
+          # Set status to Backlog
+          gh api graphql -f query='
+            mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+              updateProjectV2ItemFieldValue(input: {
+                projectId: $projectId,
+                itemId: $itemId,
+                fieldId: $fieldId,
+                value: { singleSelectOptionId: $optionId }
+              }) {
+                projectV2Item { id }
+              }
+            }' \
+            -f projectId="$PROJECT_ID" \
+            -f itemId="$ITEM_ID" \
+            -f fieldId="$STATUS_FIELD_ID" \
+            -f optionId="$STATUS_BACKLOG"
+
+          echo "Set status to Backlog"
+
+      - name: Set project fields from issue labels/template
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          CATEGORY_FIELD_ID: "PVTSSF_lADOBqFAks4BPjQdzg97Xcc"
+          CAT_FEATURE: "85e683a8"
+          CAT_BUG: "dc3fe317"
+        run: |
+          LABELS='${{ toJson(github.event.issue.labels.*.name) }}'
+          ITEM_ID=$(gh api graphql -f query='
+            mutation($projectId: ID!, $contentId: ID!) {
+              addProjectV2ItemById(input: {
+                projectId: $projectId,
+                contentId: $contentId
+              }) {
+                item { id }
+              }
+            }' \
+            -f projectId="$PROJECT_ID" \
+            -f contentId="${{ github.event.issue.node_id }}" \
+            --jq '.data.addProjectV2ItemById.item.id')
+
+          # Auto-set Category based on template label
+          if echo "$LABELS" | grep -q '"bug"'; then
+            OPTION_ID="$CAT_BUG"
+          elif echo "$LABELS" | grep -q '"feature"'; then
+            OPTION_ID="$CAT_FEATURE"
+          else
+            exit 0
+          fi
+
+          gh api graphql -f query='
+            mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+              updateProjectV2ItemFieldValue(input: {
+                projectId: $projectId,
+                itemId: $itemId,
+                fieldId: $fieldId,
+                value: { singleSelectOptionId: $optionId }
+              }) {
+                projectV2Item { id }
+              }
+            }' \
+            -f projectId="$PROJECT_ID" \
+            -f itemId="$ITEM_ID" \
+            -f fieldId="$CATEGORY_FIELD_ID" \
+            -f optionId="$OPTION_ID"
+
+          echo "Set Category from template label"
