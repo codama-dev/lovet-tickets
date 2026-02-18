@@ -94,20 +94,37 @@ body:
         - Billing / Invoices
         - Hospitalization
         - Protocols / Templates
+        - Inventory / Products
+        - Reports / Dashboard
+        - Notifications
+        - User Management / Permissions
         - Settings
         - Login / Authentication
-        - Other
+        - Navigation / Layout
+        - Search
+        - Print / Export
     validations:
       required: true
+
+  - type: input
+    id: area-other
+    attributes:
+      label: "If not listed above, specify the area"
+      description: "Fill this in if the area doesn't match any of the options above."
+      placeholder: "e.g., SMS integration, email templates..."
+    validations:
+      required: false
 
   - type: dropdown
     id: severity
     attributes:
       label: How severe is this?
+      description: "When in doubt, pick a lower severity."
       options:
-        - "Blocking — can't use the app / data loss"
+        - "Low — cosmetic or small annoyance"
+        - "Medium — inconvenient but usable"
         - "Major — feature doesn't work but there's a workaround"
-        - "Minor — cosmetic or small annoyance"
+        - "Blocking — can't use the app / data loss"
     validations:
       required: true
 
