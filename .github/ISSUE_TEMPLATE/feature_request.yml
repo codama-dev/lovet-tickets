@@ -1,0 +1,82 @@
+name: "Feature Request"
+description: "Suggest a new feature or improvement"
+labels: ["feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Feature Request
+        Help us understand what you need and why.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the pain point or need. Focus on the *why*, not the *how*.
+      placeholder: "e.g., Vets currently have to manually check each patient's vaccination schedule every morning, which takes 20 minutes."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Describe the desired outcome
+      description: What should the user be able to do? What should happen?
+      placeholder: "e.g., The system should show a daily notification with patients that need vaccinations this week."
+    validations:
+      required: true
+
+  - type: textarea
+    id: mockups
+    attributes:
+      label: Mockups / references
+      description: |
+        Add any sketches, mockups, screenshots of similar features, or reference links.
+        Drag and drop images here.
+      placeholder: "Drag and drop images or paste links here..."
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which area of the app?
+      options:
+        - Schedule / Calendar
+        - Clients
+        - Patients / Animals
+        - Medical Visits
+        - Billing / Invoices
+        - Hospitalization
+        - Protocols / Templates
+        - Settings
+        - Dashboard / Reports
+        - New section
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority-suggestion
+    attributes:
+      label: How important is this?
+      description: From the product perspective, how urgent is this?
+      options:
+        - "Critical — blocking a launch or major workflow"
+        - "High — needed this sprint"
+        - "Medium — important but can wait"
+        - "Low — nice to have"
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: How will we know this is done? List specific conditions.
+      placeholder: |
+        - [ ] Notification appears on the dashboard by 8am
+        - [ ] Shows patient name, owner, and vaccination type
+        - [ ] Clicking the notification opens the patient record
+    validations:
+      required: false

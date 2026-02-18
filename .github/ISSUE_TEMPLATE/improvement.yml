@@ -1,0 +1,52 @@
+name: "Improvement"
+description: "Improve an existing feature or workflow"
+labels: ["improvement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Improvement
+        Suggest a change to something that already exists.
+
+  - type: textarea
+    id: current
+    attributes:
+      label: How does it work today?
+      description: Describe the current behavior or workflow.
+      placeholder: "e.g., The client search only matches by exact name, so you have to type the full name."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed
+    attributes:
+      label: What should change?
+      description: Describe the improved behavior.
+      placeholder: "e.g., Search should support partial matching and also search by phone number."
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots / references
+      description: Show the current state or reference for the desired state. Drag and drop images here.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which area of the app?
+      options:
+        - Schedule / Calendar
+        - Clients
+        - Patients / Animals
+        - Medical Visits
+        - Billing / Invoices
+        - Hospitalization
+        - Protocols / Templates
+        - Settings
+        - Other
+    validations:
+      required: true

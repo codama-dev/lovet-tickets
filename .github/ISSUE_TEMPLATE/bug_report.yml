@@ -1,0 +1,121 @@
+name: "Bug Report"
+description: "Something isn't working as expected"
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Bug Report
+        Please fill out the sections below so we can reproduce and fix the issue quickly.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe what went wrong. Be as specific as possible.
+      placeholder: "e.g., When I click 'Save' on the client form, nothing happens and the page freezes."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should have happened?
+      description: Describe the correct behavior you expected.
+      placeholder: "e.g., The client should be saved and I should see a success message."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Walk us through exactly how to trigger the bug.
+      placeholder: |
+        1. Go to Clients page
+        2. Click "New Client"
+        3. Fill in the form
+        4. Click "Save"
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: |
+        Add screenshots of the problem. Drag and drop images here.
+        **Tip:** If the issue is visual, a screenshot is worth a thousand words!
+      placeholder: "Drag and drop screenshots here..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: console-logs
+    attributes:
+      label: Console logs (if available)
+      description: |
+        Open the browser console (F12 or Cmd+Option+J) and paste any red error messages here.
+        **This is extremely helpful for debugging!**
+      placeholder: |
+        Uncaught TypeError: Cannot read property 'id' of undefined
+            at ClientForm.jsx:42
+            at ...
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: network-errors
+    attributes:
+      label: Network errors (if available)
+      description: |
+        In the browser console, go to the **Network** tab, reproduce the bug, and check for any failed (red) requests.
+        Right-click the failed request → Copy → Copy as cURL, and paste here.
+      placeholder: "e.g., POST /api/clients returned 500: Internal Server Error"
+      render: shell
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where does this happen?
+      description: Which part of the app is affected?
+      options:
+        - Schedule / Calendar
+        - Clients
+        - Patients / Animals
+        - Medical Visits
+        - Billing / Invoices
+        - Hospitalization
+        - Protocols / Templates
+        - Settings
+        - Login / Authentication
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: How severe is this?
+      options:
+        - "Blocking — can't use the app / data loss"
+        - "Major — feature doesn't work but there's a workaround"
+        - "Minor — cosmetic or small annoyance"
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser & device
+      description: Which browser and device are you using?
+      placeholder: "e.g., Chrome 120 on MacOS, Safari on iPhone 15"
+    validations:
+      required: false
