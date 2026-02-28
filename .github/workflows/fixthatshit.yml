@@ -1,0 +1,124 @@
+name: FixThatShit Bot
+
+on:
+  issue_comment:
+    types: [created]
+
+env:
+  PROJECT_ID: "PVT_kwDOBqFAks4BPjQd"
+  STATUS_FIELD_ID: "PVTSSF_lADOBqFAks4BPjQdzg97V88"
+  # TODO: Find these IDs by checking your GitHub Project board or ask @fixthatshit to help
+  # STATUS_BACKLOG: "38269463" (from auto-add-to-project.yml)
+  # STATUS_IN_PROGRESS: "NEED_ID_HERE"
+  # STATUS_PR_CREATED: "NEED_ID_HERE"
+
+jobs:
+  trigger-bot:
+    if: contains(github.event.comment.body, '@fixthatshit')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract repo from comment
+        id: extract_repo
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Parse comment for repo mention (e.g., "fix this in clinic-ai-fe")
+          COMMENT="${{ github.event.comment.body }}"
+          
+          # Default to the repo where issue was created if no specific repo mentioned
+          REPO="${{ github.repository }}"
+          
+          # Check if comment mentions specific repos
+          if echo "$COMMENT" | grep -qi "clinic-ai-fe"; then
+            REPO="codama-dev/clinic-ai-fe"
+          elif echo "$COMMENT" | grep -qi "admin-frontend"; then
+            REPO="codama-dev/clinic-i-admin-frontend"
+          elif echo "$COMMENT" | grep -qi "backend"; then
+            REPO="codama-dev/lovet-express-backend"
+          fi
+          
+          echo "target_repo=$REPO" >> $GITHUB_OUTPUT
+          
+      - name: Checkout target repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.extract_repo.outputs.target_repo }}
+          token: ${{ secrets.PROJECT_TOKEN }}
+          
+      - name: Create feature branch
+        id: create_branch
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+        run: |
+          ISSUE_NUM="${{ github.event.issue.number }}"
+          BRANCH_NAME="fix/issue-${ISSUE_NUM}"
+          
+          # Create branch from default branch
+          git config user.name "fixthatshit-bot"
+          git config user.email "bot@clinique-i.dev"
+          
+          # Get default branch
+          DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)
+          
+          # Create and push branch
+          git checkout -b "$BRANCH_NAME"
+          git push -u origin "$BRANCH_NAME"
+          
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "default_branch=$DEFAULT_BRANCH" >> $GITHUB_OUTPUT
+          
+      - name: Link branch to issue
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+        run: |
+          # GitHub doesn't have a direct CLI command for this, but we can add a comment
+          gh issue comment ${{ github.event.issue.number }} \
+            --repo codama-dev/lovet-tickets \
+            --body "🤖 Created branch \`${{ steps.create_branch.outputs.branch_name }}\` in \`${{ steps.extract_repo.outputs.target_repo }}\`"
+          
+      # TODO: Uncomment this once STATUS_IN_PROGRESS ID is found
+      # - name: Update issue status to In Progress
+      #   env:
+      #     GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+      #   run: |
+      #     ITEM_ID=$(gh api graphql -f query='
+      #       mutation($projectId: ID!, $contentId: ID!) {
+      #         addProjectV2ItemById(input: {
+      #           projectId: $projectId,
+      #           contentId: $contentId
+      #         }) {
+      #           item { id }
+      #         }
+      #       }' \
+      #       -f projectId="$PROJECT_ID" \
+      #       -f contentId="${{ github.event.issue.node_id }}" \
+      #       --jq '.data.addProjectV2ItemById.item.id')
+      #     
+      #     gh api graphql -f query='
+      #       mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+      #         updateProjectV2ItemFieldValue(input: {
+      #           projectId: $projectId,
+      #           itemId: $itemId,
+      #           fieldId: $fieldId,
+      #           value: { singleSelectOptionId: $optionId }
+      #         }) {
+      #           projectV2Item { id }
+      #         }
+      #       }' \
+      #       -f projectId="$PROJECT_ID" \
+      #       -f itemId="$ITEM_ID" \
+      #       -f fieldId="$STATUS_FIELD_ID" \
+      #       -f optionId="$STATUS_IN_PROGRESS"
+          
+      # TODO: Set up public webhook URL (ngrok/cloudflared/public IP)
+      # Webhook server is running at: http://127.0.0.1:8765/webhook/github
+      # For now, the bot will need to be triggered manually or via OpenClaw
+      - name: Log webhook data (TODO: send to actual webhook)
+        run: |
+          echo "Would send webhook to FixThatShit bot with:"
+          echo "Issue: ${{ github.event.issue.number }}"
+          echo "Repo: ${{ steps.extract_repo.outputs.target_repo }}"
+          echo "Branch: ${{ steps.create_branch.outputs.branch_name }}"
+          echo ""
+          echo "TODO: Replace this step with actual webhook once public URL is configured"
+          echo "Example: curl -X POST https://YOUR_PUBLIC_URL/webhook/github ..."
