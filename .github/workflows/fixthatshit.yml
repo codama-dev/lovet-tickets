@@ -110,15 +110,20 @@ jobs:
       #       -f fieldId="$STATUS_FIELD_ID" \
       #       -f optionId="$STATUS_IN_PROGRESS"
           
-      # TODO: Set up public webhook URL (ngrok/cloudflared/public IP)
-      # Webhook server is running at: http://127.0.0.1:8765/webhook/github
-      # For now, the bot will need to be triggered manually or via OpenClaw
-      - name: Log webhook data (TODO: send to actual webhook)
+      - name: Send webhook to FixThatShit bot
         run: |
-          echo "Would send webhook to FixThatShit bot with:"
-          echo "Issue: ${{ github.event.issue.number }}"
-          echo "Repo: ${{ steps.extract_repo.outputs.target_repo }}"
-          echo "Branch: ${{ steps.create_branch.outputs.branch_name }}"
+          echo "Sending webhook to @fixthatshit bot..."
+          curl -X POST https://borough-rely-hanging-messenger.trycloudflare.com/webhook/github \
+            -H "Content-Type: application/json" \
+            -d '{
+              "issue_number": "${{ github.event.issue.number }}",
+              "issue_url": "${{ github.event.issue.html_url }}",
+              "repo": "${{ steps.extract_repo.outputs.target_repo }}",
+              "branch": "${{ steps.create_branch.outputs.branch_name }}",
+              "default_branch": "${{ steps.create_branch.outputs.default_branch }}",
+              "title": "${{ github.event.issue.title }}",
+              "body": ${{ toJson(github.event.issue.body) }},
+              "comment": ${{ toJson(github.event.comment.body) }}
+            }'
           echo ""
-          echo "TODO: Replace this step with actual webhook once public URL is configured"
-          echo "Example: curl -X POST https://YOUR_PUBLIC_URL/webhook/github ..."
+          echo "✅ Webhook sent to bot"
