@@ -7,10 +7,9 @@ on:
 env:
   PROJECT_ID: "PVT_kwDOBqFAks4BPjQd"
   STATUS_FIELD_ID: "PVTSSF_lADOBqFAks4BPjQdzg97V88"
-  # TODO: Find these IDs by checking your GitHub Project board or ask @fixthatshit to help
-  # STATUS_BACKLOG: "38269463" (from auto-add-to-project.yml)
-  # STATUS_IN_PROGRESS: "NEED_ID_HERE"
-  # STATUS_PR_CREATED: "NEED_ID_HERE"
+  STATUS_BACKLOG: "38269463"
+  STATUS_IN_PROGRESS: "cb998c15"
+  STATUS_PR_CREATED: "766667d4"
 
 jobs:
   trigger-bot:
@@ -76,39 +75,40 @@ jobs:
             --repo codama-dev/lovet-tickets \
             --body "🤖 Created branch \`${{ steps.create_branch.outputs.branch_name }}\` in \`${{ steps.extract_repo.outputs.target_repo }}\`"
           
-      # TODO: Uncomment this once STATUS_IN_PROGRESS ID is found
-      # - name: Update issue status to In Progress
-      #   env:
-      #     GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
-      #   run: |
-      #     ITEM_ID=$(gh api graphql -f query='
-      #       mutation($projectId: ID!, $contentId: ID!) {
-      #         addProjectV2ItemById(input: {
-      #           projectId: $projectId,
-      #           contentId: $contentId
-      #         }) {
-      #           item { id }
-      #         }
-      #       }' \
-      #       -f projectId="$PROJECT_ID" \
-      #       -f contentId="${{ github.event.issue.node_id }}" \
-      #       --jq '.data.addProjectV2ItemById.item.id')
-      #     
-      #     gh api graphql -f query='
-      #       mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
-      #         updateProjectV2ItemFieldValue(input: {
-      #           projectId: $projectId,
-      #           itemId: $itemId,
-      #           fieldId: $fieldId,
-      #           value: { singleSelectOptionId: $optionId }
-      #         }) {
-      #           projectV2Item { id }
-      #         }
-      #       }' \
-      #       -f projectId="$PROJECT_ID" \
-      #       -f itemId="$ITEM_ID" \
-      #       -f fieldId="$STATUS_FIELD_ID" \
-      #       -f optionId="$STATUS_IN_PROGRESS"
+      - name: Update issue status to In Progress
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+        run: |
+          ITEM_ID=$(gh api graphql -f query='
+            mutation($projectId: ID!, $contentId: ID!) {
+              addProjectV2ItemById(input: {
+                projectId: $projectId,
+                contentId: $contentId
+              }) {
+                item { id }
+              }
+            }' \
+            -f projectId="$PROJECT_ID" \
+            -f contentId="${{ github.event.issue.node_id }}" \
+            --jq '.data.addProjectV2ItemById.item.id')
+          
+          gh api graphql -f query='
+            mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+              updateProjectV2ItemFieldValue(input: {
+                projectId: $projectId,
+                itemId: $itemId,
+                fieldId: $fieldId,
+                value: { singleSelectOptionId: $optionId }
+              }) {
+                projectV2Item { id }
+              }
+            }' \
+            -f projectId="$PROJECT_ID" \
+            -f itemId="$ITEM_ID" \
+            -f fieldId="$STATUS_FIELD_ID" \
+            -f optionId="$STATUS_IN_PROGRESS"
+          
+          echo "✅ Updated issue status to In Progress"
           
       - name: Send webhook to FixThatShit bot
         run: |
