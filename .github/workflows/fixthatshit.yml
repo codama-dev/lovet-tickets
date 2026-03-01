@@ -13,7 +13,7 @@ env:
 
 jobs:
   trigger-bot:
-    if: contains(github.event.comment.body, '@fixthatshit')
+    if: contains(github.event.comment.body, '@fixthatshit') && github.event.comment.user.login != 'ncamaa'
     runs-on: ubuntu-latest
     steps:
       - name: Extract repo from issue content
