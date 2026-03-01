@@ -1,4 +1,13 @@
-# @fixthatshit Bot Setup
+# 🦞 @fixthatshit Bot Automation
+
+> **⚠️ OpenClaw/AI Automation Documentation**  
+> This file documents the automated issue-fixing bot powered by OpenClaw and Claude.  
+> This is **NOT** part of the LoVeT codebase itself - it's automation tooling.
+
+**Owner:** Nadav (ncamaa)  
+**Powered by:** [OpenClaw](https://openclaw.ai) + Claude Code
+
+---
 
 Automated code assistant that works on GitHub issues when tagged with `@fixthatshit`.
 
