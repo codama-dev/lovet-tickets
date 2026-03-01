@@ -52,28 +52,58 @@ jobs:
           ISSUE_NUM="${{ github.event.issue.number }}"
           BRANCH_NAME="fix/issue-${ISSUE_NUM}"
           
-          # Create branch from default branch
-          git config user.name "fixthatshit-bot"
-          git config user.email "bot@clinique-i.dev"
-          
-          # Get default branch
-          DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)
-          
-          # Create and push branch
-          git checkout -b "$BRANCH_NAME"
-          git push -u origin "$BRANCH_NAME"
+          # Check if branch already exists
+          if git ls-remote --heads origin "$BRANCH_NAME" | grep -q "$BRANCH_NAME"; then
+            echo "⚠️ Branch $BRANCH_NAME already exists"
+            
+            # Check if there's an existing PR
+            EXISTING_PR=$(gh pr list --repo ${{ steps.extract_repo.outputs.target_repo }} --head "$BRANCH_NAME" --json number,url --jq '.[0] | "\(.number)|\(.url)"' || echo "")
+            
+            if [ -n "$EXISTING_PR" ]; then
+              PR_NUM=$(echo "$EXISTING_PR" | cut -d'|' -f1)
+              PR_URL=$(echo "$EXISTING_PR" | cut -d'|' -f2)
+              
+              gh issue comment $ISSUE_NUM --repo codama-dev/lovet-tickets \
+                --body "⚠️ **Already in progress!**
+                
+              There's already a branch \`$BRANCH_NAME\` with [PR #$PR_NUM]($PR_URL).
+              
+              If this is a re-work after product testing:
+              - I'll continue with the existing branch
+              - Comment \`@fixthatshit restart\` to start fresh"
+            fi
+            
+            # Use existing branch
+            git fetch origin
+            git checkout "$BRANCH_NAME"
+            DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)
+          else
+            # Create new branch
+            git config user.name "fixthatshit-bot"
+            git config user.email "bot@clinique-i.dev"
+            
+            DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)
+            git checkout -b "$BRANCH_NAME"
+            git push -u origin "$BRANCH_NAME"
+          fi
           
           echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
           echo "default_branch=$DEFAULT_BRANCH" >> $GITHUB_OUTPUT
           
-      - name: Link branch to issue
+      - name: Acknowledge receipt
         env:
           GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
         run: |
-          # GitHub doesn't have a direct CLI command for this, but we can add a comment
           gh issue comment ${{ github.event.issue.number }} \
             --repo codama-dev/lovet-tickets \
-            --body "🤖 Created branch \`${{ steps.create_branch.outputs.branch_name }}\` in \`${{ steps.extract_repo.outputs.target_repo }}\`"
+            --body "🦞 **@fixthatshit received your call!**
+          
+          I'm working on this issue now.
+          
+          📦 **Target repo:** \`${{ steps.extract_repo.outputs.target_repo }}\`
+          🌿 **Branch:** \`${{ steps.create_branch.outputs.branch_name }}\`
+          
+          I'll keep you updated with progress comments here."
           
       - name: Update issue status to In Progress
         env:
