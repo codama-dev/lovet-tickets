@@ -16,27 +16,37 @@ jobs:
     if: contains(github.event.comment.body, '@fixthatshit')
     runs-on: ubuntu-latest
     steps:
-      - name: Extract repo from comment
+      - name: Extract repo from issue content
         id: extract_repo
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Parse comment for repo mention (e.g., "fix this in clinic-ai-fe")
+          # Get issue body and title for analysis
+          BODY="${{ github.event.issue.body }}"
+          TITLE="${{ github.event.issue.title }}"
           COMMENT="${{ github.event.comment.body }}"
           
-          # Default to the repo where issue was created if no specific repo mentioned
-          REPO="${{ github.repository }}"
+          # Default to tickets repo
+          REPO="codama-dev/lovet-tickets"
           
-          # Check if comment mentions specific repos
+          # Check comment for explicit repo mention first
           if echo "$COMMENT" | grep -qi "clinic-ai-fe"; then
             REPO="codama-dev/clinic-ai-fe"
-          elif echo "$COMMENT" | grep -qi "admin-frontend"; then
+          elif echo "$COMMENT" | grep -qi "admin-frontend\|clinic-i-admin"; then
             REPO="codama-dev/clinic-i-admin-frontend"
-          elif echo "$COMMENT" | grep -qi "backend"; then
+          elif echo "$COMMENT" | grep -qi "backend\|lovet-express"; then
             REPO="codama-dev/lovet-express-backend"
+          # Detect from issue body/title keywords
+          elif echo "$BODY $TITLE" | grep -Eqi "(backend|API|database|server|500|PATCH /api|GET /api|POST /api|express|prisma)"; then
+            REPO="codama-dev/lovet-express-backend"
+          elif echo "$BODY $TITLE" | grep -Eqi "(admin|dashboard|ניהול|management|UsersPage|settings)"; then
+            REPO="codama-dev/clinic-i-admin-frontend"
+          elif echo "$BODY $TITLE" | grep -Eqi "(frontend|UI|button|form|page|component|react|צבע|כפתור|עמוד)"; then
+            REPO="codama-dev/clinic-ai-fe"
           fi
           
           echo "target_repo=$REPO" >> $GITHUB_OUTPUT
+          echo "Detected repo: $REPO"
           
       - name: Checkout target repo
         uses: actions/checkout@v4
