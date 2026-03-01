@@ -29,10 +29,10 @@ jobs:
           TITLE="$ISSUE_TITLE"
           COMMENT="$COMMENT_BODY"
           
-          # Default to tickets repo
-          REPO="codama-dev/lovet-tickets"
+          # Default to backend (most common)
+          REPO="codama-dev/lovet-express-backend"
           
-          # Check comment for explicit repo mention first
+          # Check comment for explicit repo mention first (highest priority)
           if echo "$COMMENT" | grep -qi "clinic-ai-fe"; then
             REPO="codama-dev/clinic-ai-fe"
           elif echo "$COMMENT" | grep -qi "admin-frontend\|clinic-i-admin"; then
@@ -40,16 +40,16 @@ jobs:
           elif echo "$COMMENT" | grep -qi "backend\|lovet-express"; then
             REPO="codama-dev/lovet-express-backend"
           # Detect from issue body/title keywords
-          elif echo "$BODY $TITLE" | grep -Eqi "(backend|API|database|server|500|PATCH /api|GET /api|POST /api|express|prisma)"; then
-            REPO="codama-dev/lovet-express-backend"
-          elif echo "$BODY $TITLE" | grep -Eqi "(admin|dashboard|ניהול|management|UsersPage|settings)"; then
-            REPO="codama-dev/clinic-i-admin-frontend"
-          elif echo "$BODY $TITLE" | grep -Eqi "(frontend|UI|button|form|page|component|react|צבע|כפתור|עמוד)"; then
+          elif echo "$BODY $TITLE" | grep -Eqi "(frontend|UI|button|form|page|component|react|צבע|כפתור|עמוד|ClinicSettings|AppointmentForm)"; then
             REPO="codama-dev/clinic-ai-fe"
+          elif echo "$BODY $TITLE" | grep -Eqi "(admin|dashboard|ניהול|management|UsersPage|settings page|admin panel)"; then
+            REPO="codama-dev/clinic-i-admin-frontend"
+          elif echo "$BODY $TITLE" | grep -Eqi "(backend|API|database|server|500|error 500|PATCH /api|GET /api|POST /api|express|prisma|userController|permissions)"; then
+            REPO="codama-dev/lovet-express-backend"
           fi
           
           echo "target_repo=$REPO" >> $GITHUB_OUTPUT
-          echo "Detected repo: $REPO"
+          echo "✅ Detected repo: $REPO"
           
       - name: Checkout target repo
         uses: actions/checkout@v4
@@ -76,28 +76,57 @@ jobs:
               PR_NUM=$(echo "$EXISTING_PR" | cut -d'|' -f1)
               PR_URL=$(echo "$EXISTING_PR" | cut -d'|' -f2)
               
-              gh issue comment $ISSUE_NUM --repo codama-dev/lovet-tickets \
-                --body "⚠️ **Already in progress!**
+              # Check if restart was requested
+              if echo "${{ github.event.comment.body }}" | grep -qi "@fixthatshit restart"; then
+                echo "🔄 Restart requested - deleting old branch and PR"
+                gh pr close "$PR_NUM" --repo ${{ steps.extract_repo.outputs.target_repo }} --delete-branch || true
+                git push origin --delete "$BRANCH_NAME" || true
                 
-              There's already a branch \`$BRANCH_NAME\` with [PR #$PR_NUM]($PR_URL).
-              
-              If this is a re-work after product testing:
-              - I'll continue with the existing branch
-              - Comment \`@fixthatshit restart\` to start fresh"
+                # Create fresh branch
+                git config user.name "fixthatshit-bot"
+                git config user.email "bot@clinique-i.dev"
+                DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)
+                git fetch origin "$DEFAULT_BRANCH"
+                git checkout -b "$BRANCH_NAME" "origin/$DEFAULT_BRANCH"
+                git push -u origin "$BRANCH_NAME"
+                
+                gh issue comment $ISSUE_NUM --repo codama-dev/lovet-tickets \
+                  --body "🔄 **Restarting fresh!**
+                
+                Deleted old branch and PR. Starting with a clean slate on \`$BRANCH_NAME\`."
+              else
+                # Continue with existing branch
+                gh issue comment $ISSUE_NUM --repo codama-dev/lovet-tickets \
+                  --body "⚠️ **Already in progress!**
+                
+                There's already a branch \`$BRANCH_NAME\` with [PR #$PR_NUM]($PR_URL).
+                
+                If this is a re-work after product testing:
+                - I'll continue with the existing branch
+                - Comment \`@fixthatshit restart\` to start fresh"
+                
+                # Use existing branch
+                git fetch origin
+                git checkout "$BRANCH_NAME"
+                DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)
+              fi
+            else
+              # Branch exists but no PR - use existing branch
+              git fetch origin
+              git checkout "$BRANCH_NAME"
+              DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)
             fi
-            
-            # Use existing branch
-            git fetch origin
-            git checkout "$BRANCH_NAME"
-            DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)
           else
             # Create new branch
             git config user.name "fixthatshit-bot"
             git config user.email "bot@clinique-i.dev"
             
             DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)
-            git checkout -b "$BRANCH_NAME"
+            git fetch origin "$DEFAULT_BRANCH"
+            git checkout -b "$BRANCH_NAME" "origin/$DEFAULT_BRANCH"
             git push -u origin "$BRANCH_NAME"
+            
+            echo "✅ Created new branch: $BRANCH_NAME"
           fi
           
           echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
@@ -107,21 +136,30 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
         run: |
-          gh issue comment ${{ github.event.issue.number }} \
-            --repo codama-dev/lovet-tickets \
-            --body "🦞 **@fixthatshit received your call!**
+          # Only post acknowledgment if not already posted (GitHub Actions may retry)
+          EXISTING=$(gh api "repos/codama-dev/lovet-tickets/issues/${{ github.event.issue.number }}/comments" \
+            --jq '.[] | select(.body | contains("@fixthatshit received your call")) | .id' | head -1 || echo "")
           
-          I'm working on this issue now.
-          
-          📦 **Target repo:** \`${{ steps.extract_repo.outputs.target_repo }}\`
-          🌿 **Branch:** \`${{ steps.create_branch.outputs.branch_name }}\`
-          
-          I'll keep you updated with progress comments here."
+          if [ -z "$EXISTING" ]; then
+            gh issue comment ${{ github.event.issue.number }} \
+              --repo codama-dev/lovet-tickets \
+              --body "🦞 **@fixthatshit received your call!**
+            
+            I'm working on this issue now.
+            
+            📦 **Target repo:** \`${{ steps.extract_repo.outputs.target_repo }}\`
+            🌿 **Branch:** \`${{ steps.create_branch.outputs.branch_name }}\`
+            
+            I'll keep you updated with progress comments here."
+          else
+            echo "⏭️ Skipping duplicate acknowledgment comment"
+          fi
           
       - name: Update issue status to In Progress
         env:
           GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
         run: |
+          # Add to project if not already there
           ITEM_ID=$(gh api graphql -f query='
             mutation($projectId: ID!, $contentId: ID!) {
               addProjectV2ItemById(input: {
@@ -133,8 +171,33 @@ jobs:
             }' \
             -f projectId="$PROJECT_ID" \
             -f contentId="${{ github.event.issue.node_id }}" \
-            --jq '.data.addProjectV2ItemById.item.id')
+            --jq '.data.addProjectV2ItemById.item.id' 2>/dev/null || echo "")
           
+          # If already in project, get the item ID
+          if [ -z "$ITEM_ID" ]; then
+            ITEM_ID=$(gh api graphql -f query='
+              query($projectId: ID!, $contentId: ID!) {
+                node(id: $projectId) {
+                  ... on ProjectV2 {
+                    items(first: 100) {
+                      nodes {
+                        id
+                        content {
+                          ... on Issue {
+                            id
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }' \
+              -f projectId="$PROJECT_ID" \
+              -f contentId="${{ github.event.issue.node_id }}" \
+              --jq ".data.node.items.nodes[] | select(.content.id == \"${{ github.event.issue.node_id }}\") | .id")
+          fi
+          
+          # Update status to In Progress
           gh api graphql -f query='
             mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
               updateProjectV2ItemFieldValue(input: {
@@ -154,19 +217,41 @@ jobs:
           echo "✅ Updated issue status to In Progress"
           
       - name: Send webhook to FixThatShit bot
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
           echo "Sending webhook to @fixthatshit bot..."
+          
+          # Create properly escaped JSON payload using jq
+          PAYLOAD=$(jq -n \
+            --arg issue_number "${{ github.event.issue.number }}" \
+            --arg issue_url "${{ github.event.issue.html_url }}" \
+            --arg repo "${{ steps.extract_repo.outputs.target_repo }}" \
+            --arg branch "${{ steps.create_branch.outputs.branch_name }}" \
+            --arg default_branch "${{ steps.create_branch.outputs.default_branch }}" \
+            --arg title "$ISSUE_TITLE" \
+            --arg body "$ISSUE_BODY" \
+            --arg comment "$COMMENT_BODY" \
+            '{
+              issue_number: $issue_number,
+              issue_url: $issue_url,
+              repo: $repo,
+              branch: $branch,
+              default_branch: $default_branch,
+              title: $title,
+              body: $body,
+              comment: $comment
+            }')
+          
+          # Send webhook
           curl -X POST https://fixthatshit.codama.dev/webhook/github \
             -H "Content-Type: application/json" \
-            -d '{
-              "issue_number": "${{ github.event.issue.number }}",
-              "issue_url": "${{ github.event.issue.html_url }}",
-              "repo": "${{ steps.extract_repo.outputs.target_repo }}",
-              "branch": "${{ steps.create_branch.outputs.branch_name }}",
-              "default_branch": "${{ steps.create_branch.outputs.default_branch }}",
-              "title": "${{ github.event.issue.title }}",
-              "body": ${{ toJson(github.event.issue.body) }},
-              "comment": ${{ toJson(github.event.comment.body) }}
-            }'
+            -H "X-GitHub-Delivery: ${{ github.run_id }}-${{ github.run_number }}" \
+            -d "$PAYLOAD" \
+            --max-time 10 \
+            --retry 2
+          
           echo ""
           echo "✅ Webhook sent to bot"
