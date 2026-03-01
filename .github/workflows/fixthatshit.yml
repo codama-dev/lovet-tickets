@@ -13,7 +13,7 @@ env:
 
 jobs:
   trigger-bot:
-    if: contains(github.event.comment.body, '@fixthatshit') && github.event.comment.user.login != 'ncamaa'
+    if: contains(github.event.comment.body, '@fixthatshit')
     runs-on: ubuntu-latest
     steps:
       - name: Extract repo from issue content
@@ -103,7 +103,7 @@ jobs:
                 
                 If this is a re-work after product testing:
                 - I'll continue with the existing branch
-                - Comment \`@fixthatshit restart\` to start fresh"
+                - Comment \`@fix\` + \`thatshit restart\` (without spaces) to start fresh"
                 
                 # Use existing branch
                 git fetch origin
@@ -138,12 +138,12 @@ jobs:
         run: |
           # Only post acknowledgment if not already posted (GitHub Actions may retry)
           EXISTING=$(gh api "repos/codama-dev/lovet-tickets/issues/${{ github.event.issue.number }}/comments" \
-            --jq '.[] | select(.body | contains("@fixthatshit received your call")) | .id' | head -1 || echo "")
+            --jq '.[] | select(.body | contains("FixThatShit bot received your call")) | .id' | head -1 || echo "")
           
           if [ -z "$EXISTING" ]; then
             gh issue comment ${{ github.event.issue.number }} \
               --repo codama-dev/lovet-tickets \
-              --body "🦞 **@fixthatshit received your call!**
+              --body "🦞 **FixThatShit bot received your call!**
             
             I'm working on this issue now.
             
