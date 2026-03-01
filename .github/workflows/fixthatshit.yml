@@ -113,7 +113,7 @@ jobs:
       - name: Send webhook to FixThatShit bot
         run: |
           echo "Sending webhook to @fixthatshit bot..."
-          curl -X POST https://borough-rely-hanging-messenger.trycloudflare.com/webhook/github \
+          curl -X POST https://fixthatshit.codama.dev/webhook/github \
             -H "Content-Type: application/json" \
             -d '{
               "issue_number": "${{ github.event.issue.number }}",
