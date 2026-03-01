@@ -20,11 +20,14 @@ jobs:
         id: extract_repo
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
-          # Get issue body and title for analysis
-          BODY="${{ github.event.issue.body }}"
-          TITLE="${{ github.event.issue.title }}"
-          COMMENT="${{ github.event.comment.body }}"
+          # Use environment variables to avoid shell injection
+          BODY="$ISSUE_BODY"
+          TITLE="$ISSUE_TITLE"
+          COMMENT="$COMMENT_BODY"
           
           # Default to tickets repo
           REPO="codama-dev/lovet-tickets"
